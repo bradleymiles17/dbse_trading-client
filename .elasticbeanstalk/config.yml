@@ -3,7 +3,7 @@ branch-defaults:
     environment: django-env
     group_suffix: null
   master:
-    environment: django-env
+    environment: null
     group_suffix: null
 global:
   application_name: trading-agent
