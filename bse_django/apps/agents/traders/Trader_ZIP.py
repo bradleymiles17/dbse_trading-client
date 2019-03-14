@@ -1,6 +1,6 @@
 from .Trader import Trader
 import random
-from agents.models import NewOrder
+from bse_django.apps.agents.models import NewOrder
 
 
 # Trader subclass ZIP

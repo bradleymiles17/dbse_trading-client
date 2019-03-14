@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class AgentsConfig(AppConfig):
-    name = 'agents'
+    name = 'bse_django.apps.agents'
