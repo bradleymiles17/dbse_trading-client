@@ -107,3 +107,7 @@ venv.bak/
 
 /.idea/
 /static/
+
+#fix application
+fix_application/logs/
+fix_application/sessions/

@@ -33,6 +33,7 @@ ALLOWED_HOSTS = ['127.0.0.1', 'django-env.nr7qvrkfun.eu-west-2.elasticbeanstalk.
 INSTALLED_APPS = [
     'bse_django.apps.agents.apps.AgentsConfig',
     'bse_django.apps.polls.apps.PollsConfig',
+    'fix_application.FixClient',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

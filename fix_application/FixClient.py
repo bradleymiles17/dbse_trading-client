@@ -44,10 +44,16 @@ class FixClient(fix.Application):
         self.execID = self.execID + 1
         return str(self.execID)
 
-    def put_order(self):
+    def create_default_message(self):
+        message = fix.Message()
+        message.getHeader().setField(fix.BeginString(fix.BeginString_FIXT11))
+
+        return message
+
+    def create_bid(self, qty, price):
         print("Creating the following order: ")
-        trade = fix.Message()
-        trade.getHeader().setField(fix.BeginString(fix.BeginString_FIXT11))  #
+        trade = self.create_default_message()
+
         trade.getHeader().setField(fix.MsgType(fix.MsgType_NewOrderSingle))  # 39=D
         trade.setField(fix.ClOrdID(self.genExecID()))  # 11=Unique order
 
@@ -55,22 +61,69 @@ class FixClient(fix.Application):
         trade.setField(fix.Symbol('SMBL'))  # 55=SMBL ?
         trade.setField(fix.Side(fix.Side_BUY))  # 43=1 Buy
         trade.setField(fix.OrdType(fix.OrdType_LIMIT))  # 40=2 Limit order
-        trade.setField(fix.OrderQty(100))  # 38=100
-        trade.setField(fix.Price(10))
+        trade.setField(fix.OrderQty(qty))  # 38=100
+        trade.setField(fix.Price(price))
         trade.setField(fix.TransactTime())
+
         print(trade.toString())
         fix.Session.sendToTarget(trade, self.sessionID)
 
+    def create_ask(self, qty, price):
+        print("Creating the following order: ")
+        trade = self.create_default_message()
 
-def initialise_fix_app(config_file):
+        trade.getHeader().setField(fix.MsgType(fix.MsgType_NewOrderSingle))  # 39=D
+        trade.setField(fix.ClOrdID(self.genExecID()))  # 11=Unique order
+
+        trade.setField(fix.HandlInst(fix.HandlInst_MANUAL_ORDER_BEST_EXECUTION))  # 21=3 (Manual order, best executiona)
+        trade.setField(fix.Symbol('SMBL'))  # 55=SMBL ?
+        trade.setField(fix.Side(fix.Side_SELL))  # 43=1 Buy
+        trade.setField(fix.OrdType(fix.OrdType_LIMIT))  # 40=2 Limit order
+        trade.setField(fix.OrderQty(qty))  # 38=100
+        trade.setField(fix.Price(price))
+        trade.setField(fix.TransactTime())
+
+        print(trade.toString())
+        fix.Session.sendToTarget(trade, self.sessionID)
+
+    def cancel_order(self):
+        print("Cancelling the following order: ")
+        cancel = self.create_default_message()
+
+        fix.Session.sendToTarget(cancel, self.sessionID)
+
+
+if __name__ == '__main__':
     try:
-        settings = fix.SessionSettings(config_file)
+        settings = fix.SessionSettings("client.cfg")
         application = FixClient()
         storeFactory = fix.FileStoreFactory(settings)
         logFactory = fix.FileLogFactory(settings)
         initiator = fix.SocketInitiator(application, storeFactory, settings, logFactory)
         initiator.start()
 
-        return application
+        while 1:
+            input_str = input()
+            if input_str == '1':
+                print("Create BID")
+                application.create_bid(10, 100)
+            if input_str == '2':
+                print("Create ASK")
+                application.create_ask(10, 100)
+            if input_str == '3':
+                print("Create MULTI")
+                # qty, price
+                application.create_ask(20, 140)
+                application.create_ask(10, 150)
+                application.create_bid(35, 150)
+            if input_str == '4':
+                sys.exit(0)
+            if input_str == 'd':
+                import pdb
+
+                pdb.set_trace()
+            else:
+                print("Valid input is 1 for order, 2 for exit")
+                continue
     except (fix.ConfigError, fix.RuntimeError) as e:
         print(e)
