@@ -1,7 +1,7 @@
 from django.shortcuts import render
 
-from bse_django.apps.agents.traders.Trader_Giveway import Trader_Giveaway
-from bse_django.apps.agents.traders.Trader_Shaver import Trader_Shaver
+from fix_application.traders.Trader_Giveaway import Trader_Giveaway
+from fix_application.traders.Trader_Shaver import Trader_Shaver
 
 
 def index(request):

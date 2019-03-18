@@ -1,5 +1,5 @@
 import sys, time
-
+from pkg.common.Order import Order
 
 # Trader superclass
 # all Traders have a trader id, bank balance, blotter, and list of orders to execute
@@ -28,7 +28,8 @@ class Trader:
         return '[TID %s type %s balance %s blotter %s orders %s n_trades %s profitpertime %s]' \
                % (self.tid, self.t_type, self.balance, self.blotter, self.orders, self.n_trades, self.profitpertime)
 
-    def add_order(self, order, verbose):
+    def add_order(self, order: Order):
+        print(order)
         # in this version, trader has at most one order,
         # if allow more than one, this needs to be self.orders.append(order)
         if self.n_quotes > 0:
@@ -38,15 +39,14 @@ class Trader:
         else:
             response = 'Proceed'
         self.orders = [order]
-        if verbose: print('add_order < response=%s' % response)
         return response
 
-    def del_order(self, order):
+    def del_order(self, order: Order):
         # this is lazy: assumes each trader has only one customer order with quantity=1, so deleting sole order
         # CHANGE TO DELETE THE HEAD OF THE LIST AND KEEP THE TAIL
         self.orders = []
 
-    def bookkeep(self, trade, order, verbose, time):
+    def bookkeep(self, trade, order, verbose):
 
         outstr = ""
         for order in self.orders: outstr = outstr + str(order)
@@ -60,7 +60,7 @@ class Trader:
             profit = transactionprice - self.orders[0].price
         self.balance += profit
         self.n_trades += 1
-        self.profitpertime = self.balance / (time - self.birthtime)
+        # self.profitpertime = self.balance / (time - self.birthtime)
 
         if profit < 0:
             print(profit)

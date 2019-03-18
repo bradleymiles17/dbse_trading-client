@@ -1,5 +1,5 @@
+from pkg.common.Order import LimitOrder
 from .Trader import Trader
-from bse_django.apps.agents.models import NewOrder
 
 
 # Trader subclass Giveaway
@@ -11,7 +11,8 @@ class Trader_Giveaway(Trader):
         if len(self.orders) < 1:
             order = None
         else:
-            quoteprice = self.orders[0].price
-            order = NewOrder(self.tid, "BAM", self.orders[0].otype, self.orders[0].qty, quoteprice)
+            current_quote = self.orders[0]
+            quoteprice = current_quote.price
+            order = LimitOrder(self.tid, "SMBL", current_quote.side, current_quote.qty, quoteprice)
             self.lastquote = order
         return order
