@@ -1,4 +1,4 @@
-import sys, random
+import sys, random, argparse
 
 import quickfix as fix
 
@@ -8,16 +8,6 @@ from pkg.qf_map import *
 
 
 class FixClient(fix.Application):
-    orderID = 0
-    execID = 0
-
-    def genOrderID(self):
-        self.orderID = self.orderID + 1
-        return str(self.orderID)
-
-    def genExecID(self) -> str:
-        self.execID = self.execID + 1
-        return str(self.execID)
 
     def onCreate(self, sessionID):
         return
@@ -47,44 +37,11 @@ class FixClient(fix.Application):
 
         return message
 
-    def create_bid(self, qty, price):
-        trade = self.create_default_message()
-
-        trade.getHeader().setField(fix.MsgType(fix.MsgType_NewOrderSingle))  # 39=D
-        trade.setField(fix.ClOrdID(self.genExecID()))  # 11=Unique order
-
-        trade.setField(fix.HandlInst(fix.HandlInst_MANUAL_ORDER_BEST_EXECUTION))  # 21=3 (Manual order, best executiona)
-        trade.setField(fix.Symbol('SMBL'))  # 55=SMBL ?
-        trade.setField(fix.Side(fix.Side_BUY))  # 43=1 Buy
-        trade.setField(fix.OrdType(fix.OrdType_LIMIT))  # 40=2 Limit order
-        trade.setField(fix.OrderQty(qty))  # 38=100
-        trade.setField(fix.Price(price))
-        trade.setField(fix.TransactTime())
-
-        fix.Session.sendToTarget(trade, self.sessionID)
-
-
-    def create_ask(self, qty, price):
-        trade = self.create_default_message()
-
-        trade.getHeader().setField(fix.MsgType(fix.MsgType_NewOrderSingle))  # 39=D
-        trade.setField(fix.ClOrdID(self.genExecID()))  # 11=Unique order
-
-        trade.setField(fix.HandlInst(fix.HandlInst_MANUAL_ORDER_BEST_EXECUTION))  # 21=3 (Manual order, best executiona)
-        trade.setField(fix.Symbol('SMBL'))  # 55=SMBL ?
-        trade.setField(fix.Side(fix.Side_SELL))  # 43=1 Buy
-        trade.setField(fix.OrdType(fix.OrdType_LIMIT))  # 40=2 Limit order
-        trade.setField(fix.OrderQty(qty))  # 38=100
-        trade.setField(fix.Price(price))
-        trade.setField(fix.TransactTime())
-
-        fix.Session.sendToTarget(trade, self.sessionID)
-
-    def create_order(self, order: LimitOrder):
+    def place_order(self, order: LimitOrder):
         trade = self.create_default_message()
 
         trade.getHeader().setField(fix.MsgType(fix.MsgType_NewOrderSingle))
-        trade.setField(fix.ClOrdID(order.ClOrdID))
+        trade.setField(fix.ClOrdID(str(order.id)))
 
         trade.setField(fix.HandlInst(fix.HandlInst_MANUAL_ORDER_BEST_EXECUTION))
         trade.setField(fix.Symbol(order.symbol))
@@ -105,8 +62,6 @@ class FixClient(fix.Application):
     ####################################################################################################################
 
     def fromApp(self, message, sessionID):
-        print("Received: %s" % message.toString())
-
         msgType = fix.MsgType()
         message.getHeader().getField(msgType)
         type = msgType.getValue()
@@ -117,8 +72,9 @@ class FixClient(fix.Application):
             return fix.UnsupportedMessageType
 
     def on_execution_report(self, message):
-        for id in traders:
-            print("bookeep trader %d" % id)
+        print("Received: %s" % message.toString())
+
+        # for id in traders:
             # traders[id].bookkeep(message.toString(), "order", True)
 
 
@@ -127,19 +83,26 @@ class FixClient(fix.Application):
 traders = {}
 
 
-def create_random_limit_order():
-    return LimitOrder(
-        application.genOrderID(),
-        "SMBL",
-        Side.BID if (random.randint(0, 1) == 0) else Side.ASK,
-        round(random.uniform(0.80, 1.50), 2),
-        float(random.randint(10, 50))
-    )
+def create_limit_order(side=None, qty=None, price=None):
+    if side is None:
+        side = Side.BID if (random.randint(0, 1) == 0) else Side.ASK
+
+    if qty is None:
+        qty = float(random.randint(10, 50))
+
+    if price is None:
+        price = round(random.uniform(0.80, 1.50), 2)
+
+    return LimitOrder("SMBL", side, qty, price)
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='FIX Server')
+    parser.add_argument('file_name', type=str, help='Name of configuration file')
+    args = parser.parse_args()
+
     try:
-        settings = fix.SessionSettings("client.cfg")
+        settings = fix.SessionSettings(args.file_name)
         application = FixClient()
         storeFactory = fix.FileStoreFactory(settings)
         logFactory = fix.FileLogFactory(settings)
@@ -148,9 +111,9 @@ if __name__ == '__main__':
 
         # type, tid, balance
         trader1 = Trader_Giveaway("GVWY", 1, 0.00)
-        trader1.add_order(create_random_limit_order())
+        # trader1.add_order(create_limit_order())
         trader2 = Trader_Giveaway("GVWY", 2, 0.00)
-        trader2.add_order(create_random_limit_order())
+        # trader2.add_order(create_limit_order())
 
         traders[trader1.tid] = trader1
         traders[trader2.tid] = trader2
@@ -158,24 +121,29 @@ if __name__ == '__main__':
         while 1:
             input_str = input()
             if input_str == 'b':
-                application.create_bid(10, 120)
-                application.create_bid(10, 110)
-                application.create_bid(10, 150)
+                application.place_order(create_limit_order(Side.BID, 10, 1.20))
+                application.place_order(create_limit_order(Side.BID, 10, 1.10))
+                application.place_order(create_limit_order(Side.BID, 10, 1.50))
+            if input_str == 'b_all':
+                application.place_order(create_limit_order(Side.BID, 2000, 2.00))
             if input_str == 'a':
-                application.create_ask(10, 150)
-                application.create_ask(10, 170)
-                application.create_ask(10, 120)
-                application.create_ask(20, 170)
+                application.place_order(create_limit_order(Side.ASK, 10, 1.50))
+                application.place_order(create_limit_order(Side.ASK, 10, 1.70))
+                application.place_order(create_limit_order(Side.ASK, 10, 1.20))
+                application.place_order(create_limit_order(Side.ASK, 10, 1.70))
             if input_str == 'r':
-                for x in range(1000):
-                    application.create_order(create_random_limit_order())
+                # time + seconds
+                t_end = time.time() + 30
+                while time.time() < t_end:
+                    application.place_order(create_limit_order())
+                    time.sleep(0.01)
             if input_str == "algo":
                 time_left = time.time()
 
                 tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
                 order = traders[tid].get_order(time_left, {})
 
-                application.create_order(order)
+                application.place_order(order)
             if input_str == '4':
                 sys.exit(0)
             if input_str == 'd':

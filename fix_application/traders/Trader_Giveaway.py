@@ -13,6 +13,6 @@ class Trader_Giveaway(Trader):
         else:
             current_quote = self.orders[0]
             quoteprice = current_quote.price
-            order = LimitOrder(self.tid, "SMBL", current_quote.side, current_quote.qty, quoteprice)
+            order = LimitOrder("SMBL", current_quote.side, current_quote.qty, quoteprice)
             self.lastquote = order
         return order
