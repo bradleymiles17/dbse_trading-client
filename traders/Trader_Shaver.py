@@ -1,5 +1,5 @@
-from .Trader import Trader
-from bse_django.apps.agents.models import NewOrder
+from pkg.common.Order import Order
+from traders.Trader import Trader
 
 # Trader subclass Shaver
 # shaves a penny off the best price
@@ -26,6 +26,6 @@ class Trader_Shaver(Trader):
                         quoteprice = limitprice
                 else:
                     quoteprice = lob['asks']['worst']
-            order = NewOrder(self.tid, "APPL", self.orders[0].otype, self.orders[0].qty, quoteprice)
+            order = Order("APPL", self.orders[0].otype, self.orders[0].qty, quoteprice)
             self.lastquote = order
         return order

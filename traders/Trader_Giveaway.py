@@ -1,5 +1,5 @@
 from pkg.common.Order import LimitOrder
-from .Trader import Trader
+from traders.Trader import Trader
 
 
 # Trader subclass Giveaway
@@ -11,8 +11,8 @@ class Trader_Giveaway(Trader):
         if len(self.orders) < 1:
             order = None
         else:
-            current_quote = self.orders[0]
-            quoteprice = current_quote.price
-            order = LimitOrder("SMBL", current_quote.side, current_quote.qty, quoteprice)
+            id, quote = self.sample_order()
+
+            order = LimitOrder("SMBL", quote.side, quote.qty, quote.price)
             self.lastquote = order
         return order
