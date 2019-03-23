@@ -1,13 +1,14 @@
-from pkg.common.Order import Order
+from pkg.common.Order import LimitOrder
 from traders.Trader import Trader
+
 
 # Trader subclass Sniper
 # Based on Shaver,
 # "lurks" until time remaining < threshold% of the trading session
 # then gets increasing aggressive, increasing "shave thickness" as time runs out
-class Trader_Sniper(Trader):
+class TraderSniper(Trader):
 
-    def getorder(self, time, countdown, lob):
+    def get_order(self, countdown, lob):
         lurk_threshold = 0.2
         shavegrowthrate = 3
         shave = int(1.0 / (0.01 + countdown / (shavegrowthrate * lurk_threshold)))
@@ -31,6 +32,6 @@ class Trader_Sniper(Trader):
                         quoteprice = limitprice
                 else:
                     quoteprice = lob['asks']['worst']
-            order = Order("APPL", otype, self.orders[0].qty, quoteprice)
-            self.lastquote = order
+            order = LimitOrder("APPL", otype, self.orders[0].qty, quoteprice)
+            self.last_quote = order
         return order

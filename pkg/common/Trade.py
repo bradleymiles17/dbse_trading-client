@@ -1,4 +1,3 @@
-from pkg.common.Order import SessionOrder
 
 id = 0
 
@@ -10,14 +9,13 @@ def gen_trade_id():
 
 
 class Trade:
-    def __init__(self, timestamp, buyer: SessionOrder, seller: SessionOrder, price, qty):
+    def __init__(self, order_id: int, client_id: int, price, qty):
         self.id = gen_trade_id()
-        self.timestamp = timestamp
-        self.buyer = buyer
-        self.seller = seller
+        self.order_id = order_id
+        self.client_id = client_id
         self.price = price
         self.qty = qty
 
     def __str__(self):
-        return 'TRADE (%5.2f): [Q=%s P=%.2f]' % \
-               (self.timestamp, self.qty, self.price)
+        return 'TRADE: [Q=%s P=%.2f]' % \
+               (self.qty, self.price)

@@ -1,10 +1,11 @@
+from pkg.common.Order import LimitOrder
 from traders.Trader import Trader
 import random
 
 
 # Trader subclass ZIP
 # After Cliff 1997
-class Trader_ZIP(Trader):
+class TraderZIP(Trader):
 
     # ZIP init key param-values are those used in Cliff's 1997 original HP Labs tech report
     # NB this implementation keeps separate margin values for buying & selling,
@@ -40,7 +41,7 @@ class Trader_ZIP(Trader):
         self.prev_best_ask_p = None
         self.prev_best_ask_q = None
 
-    def getorder(self, time, countdown, lob):
+    def get_order(self, countdown, lob):
         if len(self.orders) < 1:
             self.active = False
             order = None
@@ -57,8 +58,8 @@ class Trader_ZIP(Trader):
             quoteprice = int(self.limit * (1 + self.margin))
             self.price = quoteprice
 
-            order = NewOrder(self.tid, "APPL", self.job, self.orders[0].qty, quoteprice)
-            self.lastquote = order
+            order = LimitOrder("APPL", self.job, self.orders[0].qty, quoteprice)
+            self.last_quote = order
         return order
 
     # update margin on basis of what happened in market
