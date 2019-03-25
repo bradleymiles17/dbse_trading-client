@@ -20,7 +20,7 @@ class Trader:
         self.balance = balance  # money in the bank
         self.blotter = []  # record of trades executed
         self.orders = {}  # customer orders currently being worked (fixed at 1)
-        self.n_quotes = 0  # number of quotes live on LOB
+        self.n_quotes = 0 # number of quotes able to trade
         # self.willing = 1  # used in ZIP etc
         # self.able = 1  # used in ZIP etc
 
@@ -39,6 +39,7 @@ class Trader:
     def add_limit_order(self, order: Order):
         print(self.tid + " add " + str(order))
         self.limit_orders[order.id] = order
+        self.n_quotes = len(self.limit_orders)
         return True
 
     def sample_limit_order(self):
@@ -75,11 +76,11 @@ class Trader:
             order.remaining -= trade_qty
 
         print('%s %s %s' % (self.tid, status, order))
-        print('%s N=%d B=%.2f' % (self.tid, self.n_trades, self.balance))
 
         if order.remaining == 0:
             del self.limit_orders[order_id]
             del self.orders[order_id]
+            self.n_quotes = len(self.limit_orders)
         else:
             self.orders[order_id] = order
 
