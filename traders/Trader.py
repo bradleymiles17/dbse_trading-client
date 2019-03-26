@@ -1,6 +1,6 @@
 import sys, time, random
 
-from fix_application import FixClient
+from fix import FixClient
 from pkg.common.Order import Order, Side, OrderState
 
 # Trader superclass

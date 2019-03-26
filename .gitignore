@@ -109,5 +109,5 @@ venv.bak/
 /static/
 
 #fix application
-fix_application/logs/
-fix_application/sessions/
+fix/logs/
+fix/sessions/

@@ -1,7 +1,7 @@
 import sys, random, argparse, math
 from datetime import datetime, timedelta
 
-from fix_application.FixClient import FixClient
+from fix.FixClient import FixClient
 from pkg.common.Order import *
 from pkg.qf_map import *
 from traders.TraderGiveaway import TraderGiveaway
@@ -98,7 +98,7 @@ def get_issue_times(n_traders, mode, interval, fit_to_interval):
         # generated sum of interarrival times longer than the interval
         # squish them back so that last arrival falls at t=interval
         for t in range(n_traders):
-            issuetimes[t] = min(interval * (issuetimes[t] / arrival_time), interval-0.1)
+            issuetimes[t] = min(interval * (issuetimes[t] / arrival_time), interval-1)
 
     return issuetimes
 
@@ -158,11 +158,6 @@ def get_order_price(i, n_traders, ranges, mode, seconds_in_experiment):
 
 
 def market_session(trial_id, buyers, sellers, order_sched):
-    traders = {}
-    traders.update(buyers)
-    traders.update(sellers)
-
-    scheduler = BackgroundScheduler()
 
     def print_time():
         time_left = (order_sched["end"] - datetime.now()) / (order_sched["end"] - order_sched["start"])
@@ -205,11 +200,19 @@ def market_session(trial_id, buyers, sellers, order_sched):
                 run_date=run_time
             )
 
+    print("Open Market: Session %d" % trial_id)
+
+    traders = {}
+    traders.update(buyers)
+    traders.update(sellers)
+
+    scheduler = BackgroundScheduler()
+
     scheduler.add_job(
         print_time,
         'interval',
         seconds=5,
-        next_run_time=order_sched["start"]
+        next_run_time=datetime.now()
     )
 
     # BUYERS
@@ -222,7 +225,7 @@ def market_session(trial_id, buyers, sellers, order_sched):
         ],
         trigger='interval',
         seconds=order_sched["interval"],
-        next_run_time=order_sched["start"],
+        next_run_time=datetime.now()
     )
 
     # SELLERS
@@ -235,7 +238,7 @@ def market_session(trial_id, buyers, sellers, order_sched):
         ],
         trigger='interval',
         seconds=order_sched["interval"],
-        next_run_time=order_sched["start"],
+        next_run_time=datetime.now()
     )
 
     scheduler.add_job(
@@ -270,6 +273,17 @@ def print_results(traders):
 
 
 def build_order_schedule(start_time, end_time):
+
+    # schedule_offsetfn returns time-dependent offset on schedule prices
+    def schedule_offsetfn(t):
+        pi2 = math.pi * 2
+        c = math.pi * 3000
+        wavelength = t / c
+        gradient = 100 * t / (c / pi2)
+        amplitude = 100 * t / (c / pi2)
+        offset = gradient + amplitude * math.sin(wavelength * t)
+        return int(round(offset, 0))
+
     range1 = (110.0, 120.0)
     demand_schedule = [
         {
@@ -303,17 +317,6 @@ def build_order_schedule(start_time, end_time):
 
 
 if __name__ == '__main__':
-
-    # schedule_offsetfn returns time-dependent offset on schedule prices
-    def schedule_offsetfn(t):
-        pi2 = math.pi * 2
-        c = math.pi * 3000
-        wavelength = t / c
-        gradient = 100 * t / (c / pi2)
-        amplitude = 100 * t / (c / pi2)
-        offset = gradient + amplitude * math.sin(wavelength * t)
-        return int(round(offset, 0))
-
 
     parser = argparse.ArgumentParser(description='FIX Server')
     parser.add_argument('file_name', type=str, help='Name of configuration file')
