@@ -14,16 +14,16 @@ class TraderShaver(Trader):
             return None
 
         if limit_order.side == Side.BID:
-            if lob['bids']['n'] > 0:
+            if lob['bids']['qty'] > 0:
                 quote_price = lob['bids']['best'] + 1
                 new_price = min(quote_price, limit_order.price)
             else:
                 new_price = lob['bids']['worst']
         else:
-            if lob['asks']['n'] > 0:
+            if lob['asks']['qty'] > 0:
                 quote_price = lob['asks']['best'] - 1
                 new_price = max(quote_price, limit_order.price)
             else:
                 new_price = lob['asks']['worst']
 
-        return LimitOrder(limit_order.symbol, limit_order.side, limit_order.qty, new_price)
+        return LimitOrder(limit_order.id, limit_order.client_id, limit_order.symbol, limit_order.side, limit_order.qty, new_price)

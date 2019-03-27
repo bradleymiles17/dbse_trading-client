@@ -50,7 +50,7 @@ class Trader:
         return self.limit_orders[random.choice(ids)]
 
     def place_order(self, order: Order):
-        print("%s place %s" % (self.tid, order))
+        print("\n%s place %s" % (self.tid, order))
         self.orders[order.id] = order
         self.fix_client.place_order(order)
         return True

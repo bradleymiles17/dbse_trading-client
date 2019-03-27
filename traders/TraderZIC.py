@@ -17,10 +17,10 @@ class TraderZIC(Trader):
         maxprice = lob['asks']['worst']
 
         if limit_order.side == Side.BID:
-            new_price = random.randint(minprice, limit_order.price)
+            new_price = round(random.uniform(minprice, limit_order.price), 0)
         elif limit_order.side == Side.ASK:
-            new_price = random.randint(limit_order.price, maxprice)
+            new_price = round(random.uniform(limit_order.price, maxprice), 0)
         else:
             sys.exit(0)
 
-        return LimitOrder(limit_order.symbol, limit_order.side, limit_order.qty, new_price)
+        return LimitOrder(limit_order.id, limit_order.client_id, limit_order.symbol, limit_order.side, limit_order.qty, new_price)
