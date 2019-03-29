@@ -21,8 +21,6 @@ class Trader:
         self.blotter = []  # record of trades executed
         self.orders = {}  # customer orders currently being worked (fixed at 1)
         self.n_quotes = 0 # number of quotes able to trade
-        # self.willing = 1  # used in ZIP etc
-        # self.able = 1  # used in ZIP etc
 
         # HISTORY
         self.profitpertime = 0  # profit per unit time
@@ -50,10 +48,16 @@ class Trader:
         return self.limit_orders[random.choice(ids)]
 
     def place_order(self, order: Order):
-        print("\n%s place %s" % (self.tid, order))
         self.orders[order.id] = order
         self.fix_client.place_order(order)
         return True
+
+    def cancel_all_live(self):
+        for index in self.orders:
+            self.fix_client.cancel_order(self.orders[index])
+
+        self.orders = {}
+        self.limit_orders = {}
 
     def book_keep(self, order_id: int, status: OrderState, trade_qty: float = None, trade_price: float = None):
         order = self.orders[order_id]

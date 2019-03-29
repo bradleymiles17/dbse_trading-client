@@ -41,6 +41,8 @@ class FixClient(fix.Application):
         return message
 
     def place_order(self, order: LimitOrder):
+        print("\n%s place %s" % (order.client_id, order))
+
         trade = self.create_default_message()
 
         trade.getHeader().setField(fix.MsgType(fix.MsgType_NewOrderSingle))
@@ -57,11 +59,20 @@ class FixClient(fix.Application):
 
         fix.Session.sendToTarget(trade, self.sessionID)
 
-    def cancel_order(self):
-        print("Cancelling the following order: ")
-        # cancel = self.create_default_message()
+    def cancel_order(self, order: LimitOrder):
+        print("%s cancel %s" % (order.client_id, order))
 
-        # fix.Session.sendToTarget(cancel, self.sessionID)
+        cancel = self.create_default_message()
+
+        cancel.getHeader().setField(fix.MsgType(fix.MsgType_OrderCancelRequest))
+        cancel.setField(fix.ClOrdID(str(order.id)))
+        cancel.setField(fix.OrigClOrdID(str(order.id)))
+
+        cancel.setField(fix.Symbol(order.symbol))
+        cancel.setField(fix.Side(side_to_fix(order.side)))
+        cancel.setField(fix.TransactTime())
+
+        fix.Session.sendToTarget(cancel, self.sessionID)
 
 ########################################################################################################################
 

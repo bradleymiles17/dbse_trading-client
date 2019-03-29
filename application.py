@@ -3,7 +3,7 @@ import quickfix as fix
 
 from datetime import datetime, timedelta
 from fix.FixClient import FixClient
-from market_data.MarketDataReceiver import MarketDataReceiver
+from market_data.MarketDataReceiverUDP_Unicast import MarketDataReceiver
 from market_session.MarketSession import MarketSession
 
 from traders.TraderGiveaway import TraderGiveaway
@@ -103,7 +103,7 @@ if __name__ == '__main__':
         # CONFIGURATION
         trial_id = 0
         start_time_seconds = 0.0
-        end_time_seconds = 300.0
+        end_time_seconds = 60.0
 
         # buyers_spec = [('GVWY', 10), ('SHVR', 10), ('ZIC', 10), ('ZIP', 10)]
         buyers_spec = [('GVWY', 5), ('SHVR', 5), ('ZIC', 5)]
@@ -118,8 +118,7 @@ if __name__ == '__main__':
         traders.update(sellers)
         fix_client.traders = traders
 
-        # Launch market data receiver
-        market_data_receiver = MarketDataReceiver()
+        market_data_receiver = MarketDataReceiver(False)
 
         while 1:
             print("\nENTER COMMAND")

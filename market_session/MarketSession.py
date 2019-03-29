@@ -15,7 +15,6 @@ class MarketSession:
         self.buyers = buyers
         self.sellers = sellers
         self.order_sched = order_schedule
-        self.market_data_receiver = market_data_receiver
 
         traders = {}
         traders.update(buyers)
@@ -23,6 +22,7 @@ class MarketSession:
         self.traders = traders
 
         self.scheduler = BackgroundScheduler()
+        self.market_data_receiver = market_data_receiver
 
     def gen_order_id(self) -> int:
         self.orderID = self.orderID + 1
@@ -137,7 +137,6 @@ class MarketSession:
         return order_price
 
     def print_results(self):
-        print("REPORT")
         for tid in list(self.traders):
             t = self.traders[tid]
             print('%s %s N=%d B=%.2f' % (t.tid, t.t_type, t.n_trades, t.balance))
@@ -165,10 +164,14 @@ class MarketSession:
 
         print('\n')
 
+    def cancel_open_orders(self):
+        for t in self.traders:
+            self.traders[t].cancel_all_live()
+
     def run(self):
         def print_time():
             time_left = (self.order_sched["end"] - datetime.now()) / (self.order_sched["end"] - self.order_sched["start"])
-            print("\nTime left {:.0%}".format(time_left))
+            print("\nTime left {:.0%}  #############################################################".format(time_left))
 
         def place_order():
             trader_name, trader = random.choice(list(self.traders.items()))
@@ -244,7 +247,7 @@ class MarketSession:
         self.scheduler.add_job(
             place_order,
             trigger='interval',
-            seconds=1,
+            seconds=0.05,
         )
 
         self.scheduler.start()
@@ -253,7 +256,11 @@ class MarketSession:
             time.sleep(1)
 
         self.scheduler.shutdown()
-        print("End of market session\n")
+        print("\nEND OF MARKET SESSION")
 
+        print("\nCANCELLING LIVE ORDERS")
+        self.cancel_open_orders()
+
+        print("\nREPORT")
         self.print_results()
         self.print_all()
