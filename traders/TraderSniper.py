@@ -1,4 +1,4 @@
-from pkg.common.Order import LimitOrder
+from pkg.common.Order import LimitOrder, Side
 from traders.Trader import Trader
 
 
@@ -12,26 +12,30 @@ class TraderSniper(Trader):
         lurk_threshold = 0.2
         shavegrowthrate = 3
         shave = int(1.0 / (0.01 + countdown / (shavegrowthrate * lurk_threshold)))
-        if (len(self.orders) < 1) or (countdown > lurk_threshold):
-            order = None
-        else:
-            limitprice = self.orders[0].price
-            otype = self.orders[0].otype
 
-            if otype == 'Bid':
-                if lob['bids']['n'] > 0:
-                    quoteprice = lob['bids']['best'] + shave
-                    if quoteprice > limitprice:
-                        quoteprice = limitprice
-                else:
-                    quoteprice = lob['bids']['worst']
+        limit_order = self.sample_limit_order()
+
+        if limit_order is None or (countdown > lurk_threshold):
+            return None
+
+        if limit_order.side == Side.BID:
+            if lob['bids']['qty'] > 0:
+                quote_price = lob['bids']['best'] + shave
+                new_price = min(quote_price, limit_order.price)
             else:
-                if lob['asks']['n'] > 0:
-                    quoteprice = lob['asks']['best'] - shave
-                    if quoteprice < limitprice:
-                        quoteprice = limitprice
-                else:
-                    quoteprice = lob['asks']['worst']
-            order = LimitOrder("APPL", otype, self.orders[0].qty, quoteprice)
-            self.last_quote = order
-        return order
+                new_price = lob['bids']['worst']
+        else:
+            if lob['asks']['qty'] > 0:
+                quote_price = lob['asks']['best'] - shave
+                new_price = max(quote_price, limit_order.price)
+            else:
+                new_price = lob['asks']['worst']
+
+        return LimitOrder(
+            limit_order.id,
+            limit_order.client_id,
+            limit_order.symbol,
+            limit_order.side,
+            limit_order.qty,
+            new_price
+        )

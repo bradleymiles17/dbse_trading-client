@@ -1,4 +1,4 @@
-from pkg.common.Order import Order, Side, LimitOrder
+from pkg.common.Order import Side, LimitOrder
 from traders.Trader import Trader
 
 
@@ -26,4 +26,11 @@ class TraderShaver(Trader):
             else:
                 new_price = lob['asks']['worst']
 
-        return LimitOrder(limit_order.id, limit_order.client_id, limit_order.symbol, limit_order.side, limit_order.qty, new_price)
+        return LimitOrder(
+            limit_order.id,
+            limit_order.client_id,
+            limit_order.symbol,
+            limit_order.side,
+            limit_order.qty,
+            new_price
+        )

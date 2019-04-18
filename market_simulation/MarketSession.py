@@ -78,44 +78,22 @@ class MarketSession:
             # generated sum of interarrival times longer than the interval
             # squish them back so that last arrival falls at t=interval
             for t in range(n_traders):
-                issuetimes[t] = min(interval * (issuetimes[t] / arrival_time), interval - 1)
+                issuetimes[t] = min(interval * (issuetimes[t] / arrival_time), interval)
 
         return issuetimes
 
     @staticmethod
-    def get_sched_mode(time, schedules):
+    def get_sched_mode(session_time, schedules):
         for s in schedules:
-            if (s["from"] <= time) and (time < s["to"]):
+            if (s["from"] < session_time) and (session_time <= s["to"]):
                 return s['ranges'], s['stepmode']
 
-        sys.exit('Fail: time=%s not within any timezone in os=%s' % (time, schedules))
+        sys.exit('Fail: time=%s not within any timezone in os=%s' % (session_time, schedules))
 
     @staticmethod
-    def get_order_price(i, n_traders, ranges, mode, seconds_in_experiment):
-        # does the first schedule range include optional dynamic offset function(s)?
-        if len(ranges[0]) > 2:
-            offsetfn = ranges[0][2]
-            if callable(offsetfn):
-                # same offset for min and max
-                offset_min = offsetfn(seconds_in_experiment.total_seconds())
-                offset_max = offset_min
-            else:
-                sys.exit('FAIL: 3rd argument of sched in getorderprice() not callable')
-
-            if len(ranges[0]) > 3:
-                # if second offset function is specfied, that applies only to the max value
-                offsetfn = ranges[0][3]
-                if callable(offsetfn):
-                    # this function applies to max
-                    offset_max = offsetfn(seconds_in_experiment.total_seconds())
-                else:
-                    sys.exit('FAIL: 4th argument of sched in getorderprice() not callable')
-        else:
-            offset_min = 0.0
-            offset_max = 0.0
-
-        pmin = offset_min + min(ranges[0][0], ranges[0][1])
-        pmax = offset_max + max(ranges[0][0], ranges[0][1])
+    def get_order_price(i, n_traders, ranges, mode):
+        pmin = min(ranges[0]["min"], ranges[0]["max"])
+        pmax = max(ranges[0]["min"], ranges[0]["max"])
         prange = pmax - pmin
         stepsize = prange / (n_traders - 1)
         halfstep = round(stepsize / 2.0)
@@ -128,8 +106,8 @@ class MarketSession:
             if len(ranges) > 1:
                 # more than one schedule: choose one equiprobably
                 s = random.randint(0, len(ranges) - 1)
-                pmin = min(ranges[s][0], ranges[s][1])
-                pmax = max(ranges[s][0], ranges[s][1])
+                pmin = min(ranges[s]["min"], ranges[s]["max"])
+                pmax = max(ranges[s]["min"], ranges[s]["max"])
             order_price = round(random.uniform(pmin, pmax), 0)
         else:
             sys.exit('FAIL: Unknown mode in schedule')
@@ -139,7 +117,7 @@ class MarketSession:
     def print_results(self):
         for tid in list(self.traders):
             t = self.traders[tid]
-            print('%s %s N=%d B=%.2f' % (t.tid, t.t_type, t.n_trades, t.balance))
+            print('%s N=%d B=%.2f' % (t.tid, t.n_trades, t.balance))
 
     def print_all(self):
         meta_data = {}
@@ -168,31 +146,37 @@ class MarketSession:
         for t in self.traders:
             self.traders[t].cancel_all_live()
 
-    def run(self):
+    def run(self, start_time_delay, duration):
+
+        self.start_time = datetime.now().replace(microsecond=0) + timedelta(seconds=start_time_delay)
+        self.end_time = self.start_time + timedelta(seconds=duration)
+
         def print_time():
-            time_left = (self.order_sched["end"] - datetime.now()) / (self.order_sched["end"] - self.order_sched["start"])
+            time_left = (self.end_time - datetime.now()) / (self.end_time - self.start_time)
             print("\nTime left {:.0%}  #############################################################".format(time_left))
 
         def place_order():
             trader_name, trader = random.choice(list(self.traders.items()))
-            tradable_order = trader.get_order(0, self.market_data_receiver.get_lob())
+            countdown = (self.end_time - datetime.now()) / (self.end_time - self.start_time)
+
+            tradable_order = trader.get_order(countdown, self.market_data_receiver.get_lob())
 
             if tradable_order is not None:
                 trader.place_order(tradable_order)
 
-        def distribute_new_order(t, t_id, n_traders, side, side_sched, issue_time, start_time):
-            ranges, mode = self.get_sched_mode(issue_time, side_sched)
-
-            seconds_in_experiment = issue_time - start_time
-            price = self.get_order_price(t, n_traders, ranges, mode, seconds_in_experiment)
+        def distribute_new_order(t, t_id, n_traders, side, side_sched, session_time):
+            ranges, mode = self.get_sched_mode(session_time, side_sched)
+            price = self.get_order_price(t, n_traders, ranges, mode)
 
             self.traders[t_id].add_limit_order(self.create_limit_order(t_id, side, 1, price))
 
         def schedule_orders(side, trader_ids):
-            now = datetime.now()
-            side_sched = self.order_sched["dem"] if side == Side.BID else self.order_sched["sup"]
+            now = datetime.now().replace(microsecond=0)
 
-            times = self.get_issue_times(
+            side_sched = self.order_sched["demand"] if side == Side.BID else self.order_sched["supply"]
+
+            # times in seconds i.e. 30.0
+            issue_delays = self.get_issue_times(
                 len(trader_ids),
                 self.order_sched["timemode"],
                 self.order_sched["interval"],
@@ -200,67 +184,87 @@ class MarketSession:
             )
             random.shuffle(trader_ids)
 
+            print("Creating %s Schedule" % side)
+            print(issue_delays)
+
             for t, t_id in enumerate(trader_ids):
-                run_time = now + timedelta(seconds=times[t])
+                issue_time = now + timedelta(seconds=issue_delays[t])
+                session_time = (issue_time - self.start_time).total_seconds()
 
                 self.scheduler.add_job(
-                    distribute_new_order,
-                    args=[t, t_id, len(trader_ids), side, side_sched, run_time, self.order_sched["start"]],
+                    func=distribute_new_order,
+                    name="Add Job Scheduler: " + side,
+                    args=[t, t_id, len(trader_ids), side, side_sched, session_time],
                     trigger='date',
-                    run_date=run_time
+                    run_date=issue_time,
                 )
 
-        print("Open Market: Session %d" % self.trial_id)
+        def end():
+            print("\nEND OF MARKET SESSION")
+
+            print("\nCANCELLING LIVE ORDERS")
+            self.cancel_open_orders()
+
+            print("\nREPORT")
+            self.print_results()
+            self.print_all()
+
+            print("APPLICATION SAFE TO CLOSE")
 
         self.scheduler.add_job(
-            print_time,
-            'interval',
+            func=print_time,
+            name="Time Scheduler",
+            trigger='interval',
             seconds=5,
-            next_run_time=datetime.now()
+            start_date=self.start_time,
+            end_date=self.end_time
         )
 
         # BUYERS
         self.scheduler.add_job(
-            schedule_orders,
+            func=schedule_orders,
+            name="BUY Scheduler",
             args=[
                 Side.BID,
                 list(self.buyers.keys()),
             ],
             trigger='interval',
             seconds=self.order_sched["interval"],
-            next_run_time=datetime.now()
+            start_date=self.start_time,
+            end_date=self.end_time - timedelta(seconds=self.order_sched["interval"])
         )
 
         # SELLERS
         self.scheduler.add_job(
-            schedule_orders,
+            func=schedule_orders,
+            name="SELL Scheduler",
             args=[
                 Side.ASK,
                 list(self.sellers.keys())
             ],
             trigger='interval',
             seconds=self.order_sched["interval"],
-            next_run_time=datetime.now()
+            start_date=self.start_time,
+            end_date=self.end_time - timedelta(seconds=self.order_sched["interval"])
         )
 
         # SEND TO EXCHANGE
         self.scheduler.add_job(
-            place_order,
+            func=place_order,
+            name="Place Order Scheduler",
             trigger='interval',
             seconds=0.05,
+            start_date=self.start_time,
+            end_date=self.end_time
         )
 
+        self.scheduler.add_job(
+            func=end,
+            name="End Market Session",
+            trigger='date',
+            run_date=self.end_time
+        )
+
+        print("Open Market: Session %d" % self.trial_id)
         self.scheduler.start()
 
-        while datetime.now() < self.order_sched["end"]:
-            time.sleep(1)
-
-        self.scheduler.shutdown()
-        print("\nEND OF MARKET SESSION")
-
-        print("\nCANCELLING LIVE ORDERS")
-        self.cancel_open_orders()
-
-        print("\nREPORT")
-        self.print_results()
-        self.print_all()

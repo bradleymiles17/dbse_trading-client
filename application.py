@@ -1,13 +1,15 @@
+import json
 import math, sys, argparse
 import quickfix as fix
 
 from datetime import datetime, timedelta
 from fix.FixClient import FixClient
 from market_data.MarketDataReceiverUDP_Unicast import MarketDataReceiver
-from market_session.MarketSession import MarketSession
+from market_simulation.MarketSession import MarketSession
 
 from traders.TraderGiveaway import TraderGiveaway
 from traders.TraderShaver import TraderShaver
+from traders.TraderSniper import TraderSniper
 from traders.TraderZIC import TraderZIC
 
 
@@ -22,8 +24,8 @@ def populate_market(traders_spec, pre_name, fix_client: FixClient):
             return TraderZIC('ZIC', name, 0.00, fix_client)
         elif robot_type == 'SHVR':
             return TraderShaver('SHVR', name, 0.00, fix_client)
-        # elif robot_type == 'SNPR':
-        #     return TraderSniper('SNPR', name, 0.00, fix_client)
+        elif robot_type == 'SNPR':
+            return TraderSniper('SNPR', name, 0.00, fix_client)
         # elif robot_type == 'ZIP':
         #     return TraderZIP('ZIP', name, 0.00, fix_client)
         else:
@@ -31,10 +33,10 @@ def populate_market(traders_spec, pre_name, fix_client: FixClient):
 
     traders = {}
 
-    for bs in traders_spec:
-        for count in range(bs[1]):
-            name = pre_name + '%02d' % len(traders)
-            traders[name] = trader_type(bs[0], name)
+    for robot_type in traders_spec:
+        for count in range(traders_spec[robot_type]):
+            name = "%s%02d_%s" % (pre_name, len(traders), robot_type)
+            traders[name] = trader_type(robot_type, name)
 
     if len(traders) < 1:
         sys.exit('FATAL: no buyers specified\n')
@@ -42,101 +44,51 @@ def populate_market(traders_spec, pre_name, fix_client: FixClient):
     return traders
 
 
-def build_order_schedule(start_time, end_time):
-
-    # schedule_offsetfn returns time-dependent offset on schedule prices
-    def schedule_offsetfn(t):
-        pi2 = math.pi * 2
-        c = math.pi * 3000
-        wavelength = t / c
-        gradient = 100 * t / (c / pi2)
-        amplitude = 100 * t / (c / pi2)
-        offset = gradient + amplitude * math.sin(wavelength * t)
-        return int(round(offset, 0))
-
-    range1 = (90.0, 120.0)
-    demand_schedule = [
-        {
-            'from': start_time,
-            'to': end_time,
-            'ranges': [range1],
-            'stepmode': 'fixed'
-        }
-    ]
-
-    range1 = (105.0, 140.0)
-    supply_schedule = [
-        {
-            'from': start_time,
-            'to': end_time,
-            'ranges': [range1],
-            'stepmode': 'fixed'
-        }
-    ]
-
-    order_sched = {
-        'dem': demand_schedule,
-        'sup': supply_schedule,
-        'start': start_time,
-        'end': end_time,
-        'interval': 30,
-        'timemode': 'drip-poisson'
-    }
-
-    return order_sched
-
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='FIX Server')
-    parser.add_argument('file_name', type=str, help='Name of configuration file')
+    parser = argparse.ArgumentParser(description='Bristol Stock Exchange')
+    parser.add_argument('fix_config', type=str, help='FIX configuration file')
+    parser.add_argument('market_config', type=str, help='Market Session configuration file')
+    parser.add_argument("-s", "--start_delay", type=float, help="start delay in seconds")
+    parser.add_argument("-d", "--duration", type=float, help="duration of market session in secionds")
+    parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     args = parser.parse_args()
 
+    with open(args.market_config, 'r') as f:
+        config = json.load(f)
+
     try:
-        settings = fix.SessionSettings(args.file_name)
+        settings = fix.SessionSettings(args.fix_config)
         fix_client = FixClient()
         storeFactory = fix.FileStoreFactory(settings)
         logFactory = fix.FileLogFactory(settings)
         initiator = fix.SocketInitiator(fix_client, storeFactory, settings, logFactory)
         initiator.start()
 
-        # CONFIGURATION
-        trial_id = 0
-        start_time_seconds = 0.0
-        end_time_seconds = 60.0
+        market_data_receiver = MarketDataReceiver(args.verbose)
+        market_data_receiver.run()
 
-        # buyers_spec = [('GVWY', 10), ('SHVR', 10), ('ZIC', 10), ('ZIP', 10)]
-        buyers_spec = [('GVWY', 5), ('SHVR', 5), ('ZIC', 5)]
-        sellers_spec = buyers_spec
-        traders_spec = {'sellers': sellers_spec, 'buyers': buyers_spec}
-
-        buyers = populate_market(traders_spec['buyers'], 'B', fix_client)
-        sellers = populate_market(traders_spec['sellers'], 'S', fix_client)
+        buyers = populate_market(config["traders"]['buyers'], 'B', fix_client)
+        sellers = populate_market(config["traders"]['sellers'], 'S', fix_client)
 
         traders = {}
         traders.update(buyers)
         traders.update(sellers)
         fix_client.traders = traders
 
-        market_data_receiver = MarketDataReceiver(False)
+        start_time_delay = 5.0 if (args.start_delay is None) else args.start_delay
+        duration = 600.0 if (args.duration is None) else args.duration
 
-        while 1:
-            print("\nENTER COMMAND")
-            input_str = input()
-            if input_str == "market":
-                start_time = datetime.now() + timedelta(seconds=start_time_seconds)
-                end_time = start_time + timedelta(seconds=end_time_seconds)
+        market_session = MarketSession(
+            0,
+            buyers,
+            sellers,
+            config["order_schedule"],
+            market_data_receiver
+        )
 
-                order_schedule = build_order_schedule(start_time, end_time)
-                session = MarketSession(trial_id, buyers, sellers, order_schedule, market_data_receiver)
-                session.run()
-            if input_str == '4':
-                sys.exit(0)
-            if input_str == 'd':
-                import pdb
+        market_session.run(start_time_delay, duration)
 
-                pdb.set_trace()
-            else:
-                continue
     except (fix.ConfigError, fix.RuntimeError) as e:
         print(e)

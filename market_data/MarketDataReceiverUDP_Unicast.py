@@ -20,10 +20,13 @@ class MarketDataReceiver:
         print(server_address)
         self.lob = {}
         self.verbose = verbose
-        Thread(target=self.__listen).start()
+        self.listener = Thread(name="MarketDataReceiver", target=self.__listen)
 
     def get_lob(self):
         return self.lob
+
+    def run(self):
+        self.listener.start()
 
     def __listen(self):
         print("Listening...")
