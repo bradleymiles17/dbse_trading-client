@@ -1,16 +1,10 @@
 {
     "traders": {
         "buyers": {
-            "GVWY": 5,
-            "ZIC": 5,
-            "SHVR": 5,
-            "SNPR": 5
+            "GVWY": 10
         },
         "sellers": {
-            "GVWY": 5,
-            "ZIC": 5,
-            "SHVR": 5,
-            "SNPR": 5
+            "GVWY": 10
         }
     },
     "order_schedule": {
@@ -22,7 +16,7 @@
                     "min": 90.0,
                     "max": 120.0
                 }],
-                "stepmode": "random"
+                "stepmode": "fixed"
             }
         ],
         "supply": [
@@ -33,10 +27,10 @@
                     "min": 105.0,
                     "max": 140.0
                 }],
-                "stepmode": "random"
+                "stepmode": "fixed"
             }
         ],
-        "interval": 10,
+        "interval": 20,
         "timemode": "drip-poisson"
     }
 }

@@ -1,10 +1,16 @@
 {
     "traders": {
         "buyers": {
-            "GVWY": 10
+            "GVWY": 0,
+            "ZIC": 5,
+            "SHVR": 5,
+            "SNPR": 5
         },
         "sellers": {
-            "GVWY": 10
+            "GVWY": 0,
+            "ZIC": 5,
+            "SHVR": 5,
+            "SNPR": 5
         }
     },
     "order_schedule": {
@@ -30,7 +36,7 @@
                 "stepmode": "fixed"
             }
         ],
-        "interval": 10,
+        "interval": 20,
         "timemode": "drip-poisson"
     }
 }
