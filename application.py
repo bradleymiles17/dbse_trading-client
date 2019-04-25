@@ -1,12 +1,12 @@
+import argparse
 import json
-import math, sys, argparse
+import sys
+
 import quickfix as fix
 
-from datetime import datetime, timedelta
 from fix.FixClient import FixClient
 from market_data.MarketDataReceiverUDP_Unicast import MarketDataReceiver
 from market_simulation.MarketSession import MarketSession
-
 from traders.TraderGiveaway import TraderGiveaway
 from traders.TraderShaver import TraderShaver
 from traders.TraderSniper import TraderSniper
@@ -16,16 +16,16 @@ from traders.TraderZIC import TraderZIC
 # create a bunch of traders from traders_spec
 # returns tuple (n_buyers, n_sellers)
 # optionally shuffles the pack of buyers and the pack of sellers
-def populate_market(traders_spec, pre_name, fix_client: FixClient):
+def populate_market(traders_spec, pre_name, verbose, fix_client: FixClient):
     def trader_type(robot_type, name):
         if robot_type == 'GVWY':
-            return TraderGiveaway('GVWY', name, 0.00, fix_client)
+            return TraderGiveaway('GVWY', name, 0.00, verbose, fix_client)
         elif robot_type == 'ZIC':
-            return TraderZIC('ZIC', name, 0.00, fix_client)
+            return TraderZIC('ZIC', name, 0.00, verbose, fix_client)
         elif robot_type == 'SHVR':
-            return TraderShaver('SHVR', name, 0.00, fix_client)
+            return TraderShaver('SHVR', name, 0.00, verbose, fix_client)
         elif robot_type == 'SNPR':
-            return TraderSniper('SNPR', name, 0.00, fix_client)
+            return TraderSniper('SNPR', name, 0.00, verbose, fix_client)
         # elif robot_type == 'ZIP':
         #     return TraderZIP('ZIP', name, 0.00, fix_client)
         else:
@@ -43,16 +43,16 @@ def populate_market(traders_spec, pre_name, fix_client: FixClient):
 
     return traders
 
-
-
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Bristol Stock Exchange')
     parser.add_argument('fix_config', type=str, help='FIX configuration file')
     parser.add_argument('market_config', type=str, help='Market Session configuration file')
-    parser.add_argument("-s", "--start_delay", type=float, help="start delay in seconds")
-    parser.add_argument("-d", "--duration", type=float, help="duration of market session in secionds")
-    parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
+    parser.add_argument("-s", "--start_delay", type=float, default=5, help="start delay in seconds")
+    parser.add_argument("-d", "--duration", type=float, default=300, help="duration of market session in seconds")
+    parser.add_argument("-t", "--trader", default=False, help="increase trader output verbosity", action="store_true")
+    parser.add_argument("-m", "--market", default=False, help="increase market output verbosity", action="store_true")
+    parser.add_argument("-f", "--fix", default=False, help="increase fix output verbosity", action="store_true")
     args = parser.parse_args()
 
     with open(args.market_config, 'r') as f:
@@ -60,35 +60,32 @@ if __name__ == '__main__':
 
     try:
         settings = fix.SessionSettings(args.fix_config)
-        fix_client = FixClient()
+        fix_client = FixClient(args.fix)
         storeFactory = fix.FileStoreFactory(settings)
         logFactory = fix.FileLogFactory(settings)
         initiator = fix.SocketInitiator(fix_client, storeFactory, settings, logFactory)
         initiator.start()
 
-        market_data_receiver = MarketDataReceiver(args.verbose)
-        market_data_receiver.run()
-
-        buyers = populate_market(config["traders"]['buyers'], 'B', fix_client)
-        sellers = populate_market(config["traders"]['sellers'], 'S', fix_client)
+        buyers = populate_market(config["traders"]['buyers'], 'B', args.trader, fix_client)
+        sellers = populate_market(config["traders"]['sellers'], 'S', args.trader, fix_client)
 
         traders = {}
         traders.update(buyers)
         traders.update(sellers)
         fix_client.traders = traders
 
-        start_time_delay = 5.0 if (args.start_delay is None) else args.start_delay
-        duration = 600.0 if (args.duration is None) else args.duration
-
         market_session = MarketSession(
             0,
+            args.start_delay,
+            args.duration,
             buyers,
             sellers,
             config["order_schedule"],
-            market_data_receiver
         )
 
-        market_session.run(start_time_delay, duration)
+        market_data_receiver = MarketDataReceiver(args.market, market_session.place_order)
+        market_data_receiver.run()
+        market_session.run()
 
     except (fix.ConfigError, fix.RuntimeError) as e:
         print(e)

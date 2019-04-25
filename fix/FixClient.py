@@ -1,15 +1,13 @@
-import sys, random, argparse, math
-
-import quickfix as fix
-
 from pkg.common.Order import *
-from pkg.common.Trade import Trade
 from pkg.qf_map import *
 
 
 class FixClient(fix.Application):
 
-    traders = {}
+    def __init__(self, verbose):
+        super().__init__()
+        self.traders = {}
+        self.verbose = verbose
 
     def onCreate(self, sessionID):
         return
@@ -31,7 +29,8 @@ class FixClient(fix.Application):
     ####################################################################################################################
 
     def toApp(self, message: fix.Message, sessionID: fix.SessionID):
-        # print("\nSending message: %s" % message.toString())
+        if self.verbose:
+            print("\nSending message: %s" % message.toString())
         return
 
     def create_default_message(self):
@@ -41,7 +40,8 @@ class FixClient(fix.Application):
         return message
 
     def place_order(self, order: LimitOrder):
-        print("\n%s place %s" % (order.client_id, order))
+        if self.verbose:
+            print("\n%s place %s" % (order.client_id, order))
 
         trade = self.create_default_message()
 
@@ -60,7 +60,8 @@ class FixClient(fix.Application):
         fix.Session.sendToTarget(trade, self.sessionID)
 
     def cancel_order(self, order: LimitOrder):
-        print("%s cancel %s" % (order.client_id, order))
+        if self.verbose:
+            print("%s cancel %s" % (order.client_id, order))
 
         cancel = self.create_default_message()
 

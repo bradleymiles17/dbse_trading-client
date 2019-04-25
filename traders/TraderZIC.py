@@ -1,6 +1,8 @@
+import random
+import sys
+
 from pkg.common.Order import LimitOrder, Side
 from traders.Trader import Trader
-import random, sys
 
 
 # Trader subclass ZI-C

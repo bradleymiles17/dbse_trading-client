@@ -1,6 +1,7 @@
-import socket, json
+import json
+import socket
+import time
 from threading import Thread
-from datetime import datetime
 
 UDP_IP = socket.gethostbyname(socket.gethostname())
 UDP_PORT = 5005
@@ -15,15 +16,17 @@ sock.bind(server_address)
 
 class MarketDataReceiver:
 
-    def __init__(self, verbose: bool):
+    def __init__(self, verbose: bool, f):
         print("Initialising Market Data Receiver")
         print(server_address)
-        self.lob = {}
         self.verbose = verbose
+        self.place_order_fnc = f
+
+        self.last_update = 0
         self.listener = Thread(name="MarketDataReceiver", target=self.__listen)
 
-    def get_lob(self):
-        return self.lob
+    def distribute(self, lob):
+        self.place_order_fnc(lob)
 
     def run(self):
         self.listener.start()
@@ -34,13 +37,21 @@ class MarketDataReceiver:
             msg, address = sock.recvfrom(BUFFER_SIZE)
 
             lob_update = json.loads(msg.decode('utf-8'))
-            if self.lob != {} and self.verbose:
-                self.__print_update(lob_update)
 
-            self.lob = lob_update
+            if lob_update["time"] > self.last_update:
 
-    def __print_update(self, lob_update):
-        print("\nMARKET UPDATE: %s" % lob_update)
-        print("Latency = %f" % (datetime.timestamp(datetime.now()) - lob_update['time']))
-        print("Time Since Last = %f\n" % (lob_update['time'] - self.lob['time']))
+                if self.verbose:
+                    print("MARKET UPDATE")
+                    self.__print_lob(lob_update)
+                    self.__print_stats(lob_update)
 
+                self.distribute(lob_update)
+                self.last_update = lob_update["time"]
+
+    def __print_lob(self, lob_update):
+        print("LOB: " + str(lob_update))
+
+    def __print_stats(self, lob_update):
+        now = time.time()
+        print("Latency = %f (%f %f)" % (now - lob_update["time"], now, lob_update["time"]))
+        # print("Time Since Last = %f\n" % (lob_update['time'] - self.lob['time']))

@@ -1,6 +1,7 @@
+import random
+
 from pkg.common.Order import LimitOrder
 from traders.Trader import Trader
-import random
 
 
 # Trader subclass ZIP

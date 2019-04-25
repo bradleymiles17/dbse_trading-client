@@ -1,16 +1,17 @@
-import sys, time, random
+import random
+import time
 
 from fix import FixClient
 from pkg.common.Order import Order, Side, OrderState
 
+
 # Trader superclass
 # all Traders have a trader id, bank balance, blotter, and list of orders to execute
-from pkg.common.Trade import Trade
 
 
 class Trader:
 
-    def __init__(self, t_type: str, tid: str, balance: float, fix_client: FixClient):
+    def __init__(self, t_type: str, tid: str, balance: float, verbose, fix_client: FixClient):
         self.t_type = t_type  # what type / strategy this trader is
         self.tid = tid  # trader unique ID code
         self.birthtime = time.time()  # used when calculating age of a trader/strategy
@@ -28,6 +29,7 @@ class Trader:
         self.last_quote = None  # record of what its last quote was
 
         self.fix_client = fix_client
+        self.verbose = verbose
 
 
     def __str__(self):
@@ -35,7 +37,8 @@ class Trader:
                % (self.tid, self.t_type, self.balance, self.blotter, self.orders, self.n_trades, self.profitpertime)
 
     def add_limit_order(self, order: Order):
-        print(self.tid + " add " + str(order))
+        if self.verbose:
+            print(self.tid + " new " + str(order))
         self.limit_orders[order.id] = order
         self.n_quotes = len(self.limit_orders)
         return True
@@ -50,10 +53,10 @@ class Trader:
     def place_order(self, order: Order):
         self.orders[order.id] = order
         self.fix_client.place_order(order)
-        return True
 
     def cancel_all_live(self):
-        for index in self.orders:
+        keys = list(self.orders)
+        for index in keys:
             self.fix_client.cancel_order(self.orders[index])
 
         self.orders = {}
@@ -63,8 +66,6 @@ class Trader:
         order = self.orders[order_id]
         order.order_state = status
         # self.blotter.append(trade)  # add trade record to trader's blotter
-        # NB What follows is **LAZY** -- assumes all orders are quantity=1
-        # transactionprice = trade['price']
 
         # TRADE OCCURRED
         if trade_qty is not None and trade_price is not None:
@@ -79,7 +80,8 @@ class Trader:
 
             order.remaining -= trade_qty
 
-        print('%s %s %s' % (self.tid, status, order))
+        if self.verbose:
+            print('%s %s %s' % (self.tid, status, order))
 
         if order.remaining == 0:
             del self.limit_orders[order_id]

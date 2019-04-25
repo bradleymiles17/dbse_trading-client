@@ -1,4 +1,5 @@
-import sys, random
+import random
+import sys
 from datetime import datetime, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -9,7 +10,9 @@ from pkg.qf_map import *
 
 class MarketSession:
 
-    def __init__(self, trial_id, buyers, sellers, order_schedule, market_data_receiver):
+    def __init__(self, trial_id, start_time_delay, duration, buyers, sellers, order_schedule):
+        self.start_time = datetime.now().replace(microsecond=0) + timedelta(seconds=start_time_delay)
+        self.end_time = self.start_time + timedelta(seconds=duration)
         self.orderID = 0
         self.trial_id = trial_id
         self.buyers = buyers
@@ -22,7 +25,6 @@ class MarketSession:
         self.traders = traders
 
         self.scheduler = BackgroundScheduler()
-        self.market_data_receiver = market_data_receiver
 
     def gen_order_id(self) -> int:
         self.orderID = self.orderID + 1
@@ -142,27 +144,27 @@ class MarketSession:
 
         print('\n')
 
+    def get_countdown(self):
+        return (self.end_time - datetime.now()) / (self.end_time - self.start_time)
+
+    def place_order(self, lob):
+        if datetime.now() < self.end_time:
+            for t in self.traders:
+                trader = self.traders[t]
+
+                tradable_order = trader.get_order(self.get_countdown(), lob)
+                if tradable_order is not None:
+                    trader.place_order(tradable_order)
+
     def cancel_open_orders(self):
         for t in self.traders:
             self.traders[t].cancel_all_live()
 
-    def run(self, start_time_delay, duration):
-
-        self.start_time = datetime.now().replace(microsecond=0) + timedelta(seconds=start_time_delay)
-        self.end_time = self.start_time + timedelta(seconds=duration)
+    def run(self):
 
         def print_time():
-            time_left = (self.end_time - datetime.now()) / (self.end_time - self.start_time)
-            print("\nTime left {:.0%}  #############################################################".format(time_left))
-
-        def place_order():
-            trader_name, trader = random.choice(list(self.traders.items()))
-            countdown = (self.end_time - datetime.now()) / (self.end_time - self.start_time)
-
-            tradable_order = trader.get_order(countdown, self.market_data_receiver.get_lob())
-
-            if tradable_order is not None:
-                trader.place_order(tradable_order)
+            countdown = self.get_countdown()
+            print("\nTime left {:.0%}  #############################################################".format(countdown))
 
         def distribute_new_order(t, t_id, n_traders, side, side_sched, session_time):
             ranges, mode = self.get_sched_mode(session_time, side_sched)
@@ -246,16 +248,6 @@ class MarketSession:
             seconds=self.order_sched["interval"],
             start_date=self.start_time,
             end_date=self.end_time - timedelta(seconds=self.order_sched["interval"])
-        )
-
-        # SEND TO EXCHANGE
-        self.scheduler.add_job(
-            func=place_order,
-            name="Place Order Scheduler",
-            trigger='interval',
-            seconds=0.05,
-            start_date=self.start_time,
-            end_date=self.end_time
         )
 
         self.scheduler.add_job(

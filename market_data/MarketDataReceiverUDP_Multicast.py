@@ -1,6 +1,8 @@
-import socket, struct, json
-from threading import Thread
+import json
+import socket
+import struct
 from datetime import datetime
+from threading import Thread
 
 # REMOTE GROUP IP
 multicast_group = '224.3.29.71'
