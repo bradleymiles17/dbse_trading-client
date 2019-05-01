@@ -3,6 +3,7 @@ import time
 
 from fix_engine import FixClient
 from pkg.common.Order import Order, Side, OrderState
+from pkg.common.Trade import Trade
 
 
 # Trader superclass
@@ -59,26 +60,26 @@ class Trader:
         for index in keys:
             self.fix_client.cancel_order(self.orders[index])
 
-        self.orders = {}
-        self.limit_orders = {}
+        # self.orders = {}
+        # self.limit_orders = {}
 
-    def book_keep(self, order_id: int, status: OrderState, trade_qty: float = None, trade_price: float = None):
+    def book_keep(self, order_id: int, status: OrderState, trade: Trade = None):
         order = self.orders[order_id]
         order.order_state = status
-        # self.blotter.append(trade)  # add trade record to trader's blotter
 
         # TRADE OCCURRED
-        if trade_qty is not None and trade_price is not None:
+        if trade is not None:
             if order.side == Side.BID:
-                profit = (order.price - trade_price) * trade_qty
+                profit = (order.price - trade.price) * trade.qty
             else:
-                profit = (trade_price - order.price) * trade_qty
+                profit = (trade.price - order.price) * trade.qty
 
             self.balance += profit
             self.n_trades += 1
+            self.blotter.append(trade)
             self.profitpertime = self.balance / (time.time() - self.birthtime)
 
-            order.remaining -= trade_qty
+            order.remaining -= trade.qty
 
         if self.verbose:
             print('%s %s %s' % (self.tid, status, order))

@@ -1,4 +1,5 @@
 from pkg.common.Order import *
+from pkg.common.Trade import Trade
 from pkg.qf_map import *
 
 
@@ -125,11 +126,12 @@ class FixClient(fix.Application):
         transaction_price = fix.LastPx()
         message.getField(transaction_price)
 
+        trade = Trade(order_id.getValue(), client_id.getValue(), transaction_qty.getValue(), transaction_price.getValue())
+
         self.traders[client_id.getValue()].book_keep(
             int(order_id.getValue()),
             fix_to_order_status(order_status.getValue()),
-            transaction_qty.getValue(),
-            transaction_price.getValue()
+            trade
         )
 
 

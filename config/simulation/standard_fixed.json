@@ -2,15 +2,15 @@
     "traders": {
         "buyers": {
             "GVWY": 0,
-            "ZIC": 5,
-            "SHVR": 5,
-            "SNPR": 5
+            "ZIC": 10,
+            "SHVR": 10,
+            "SNPR": 10
         },
         "sellers": {
             "GVWY": 0,
-            "ZIC": 5,
-            "SHVR": 5,
-            "SNPR": 5
+            "ZIC": 10,
+            "SHVR": 10,
+            "SNPR": 10
         }
     },
     "order_schedule": {
@@ -35,9 +35,15 @@
             },
             {
                 "from": 180,
-                "to": 600,
-                "ranges": [{"min": 90.0, "max": 110.0}],
-                "stepmode": "random"
+                "to": 240,
+                "ranges": [{"min": 200.0, "max": 300.0}],
+                "stepmode": "fixed"
+            },
+            {
+                "from": 240,
+                "to": 300,
+                "ranges": [{"min": 10.0, "max": 190.0}],
+                "stepmode": "fixed"
             }
         ],
         "supply": [
@@ -61,12 +67,18 @@
             },
             {
                 "from": 180,
-                "to": 600,
-                "ranges": [{"min": 90.0, "max": 110.0}],
-                "stepmode": "random"
+                "to": 240,
+                "ranges": [{"min": 200.0, "max": 300.0}],
+                "stepmode": "fixed"
+            },
+            {
+                "from": 240,
+                "to": 300,
+                "ranges": [{"min": 10.0, "max": 190.0}],
+                "stepmode": "fixed"
             }
         ],
-        "interval": 20,
+        "interval": 10,
         "timemode": "drip-poisson"
     }
 }

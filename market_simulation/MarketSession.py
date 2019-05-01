@@ -23,6 +23,7 @@ class MarketSession:
         traders.update(buyers)
         traders.update(sellers)
         self.traders = traders
+        self.traders_keys = list(self.traders.keys())
 
         self.scheduler = BackgroundScheduler()
 
@@ -121,7 +122,7 @@ class MarketSession:
             t = self.traders[tid]
             print('%s N=%d B=%.2f' % (t.tid, t.n_trades, t.balance))
 
-    def print_all(self):
+    def print_summary(self):
         meta_data = {}
 
         # COLLATE TRADERS BY TYPE
@@ -129,27 +130,32 @@ class MarketSession:
             t_type = self.traders[t].t_type
 
             if t_type in meta_data.keys():
-                balance = meta_data[t_type]['balance_sum'] + self.traders[t].balance
-                n = meta_data[t_type]['count'] + 1
+                meta_data[t_type] = {
+                    'n_trades': meta_data[t_type]['n_trades'] + 1,
+                    'profit': meta_data[t_type]['profit'] + self.traders[t].balance
+                }
             else:
-                balance = self.traders[t].balance
-                n = 1
-            meta_data[t_type] = {'count': n, 'balance_sum': balance}
+                meta_data[t_type] = {'n_trades': 1, 'profit': self.traders[t].balance}
 
         # PRINT TRADER TYPE REPORT
-        for ttype in sorted(list(meta_data.keys())):
-            n = meta_data[ttype]['count']
-            profit = meta_data[ttype]['balance_sum']
-            print('%s, TOTAL=%.2f, AVERAGE=%.2f' % (ttype, profit, profit / float(n)))
+        for t_type in sorted(list(meta_data.keys())):
+            n = meta_data[t_type]['n_trades']
+            profit = meta_data[t_type]['profit']
+            print('%s, TOTAL=%.2f, AVERAGE=%.2f' % (t_type, profit, profit / float(n)))
 
         print('\n')
 
     def get_countdown(self):
         return (self.end_time - datetime.now()) / (self.end_time - self.start_time)
 
+    def __sample_keys(self):
+        random.shuffle(self.traders_keys)
+        return self.traders_keys
+
     def place_order(self, lob):
         if datetime.now() < self.end_time:
-            for t in self.traders:
+
+            for t in self.__sample_keys():
                 trader = self.traders[t]
 
                 tradable_order = trader.get_order(self.get_countdown(), lob)
@@ -172,31 +178,31 @@ class MarketSession:
 
             self.traders[t_id].add_limit_order(self.create_limit_order(t_id, side, 1, price))
 
-        def schedule_orders(side, trader_ids):
+        def schedule_orders(side, side_trader_ids):
             now = datetime.now().replace(microsecond=0)
 
             side_sched = self.order_sched["demand"] if side == Side.BID else self.order_sched["supply"]
 
             # times in seconds i.e. 30.0
             issue_delays = self.get_issue_times(
-                len(trader_ids),
+                len(side_trader_ids),
                 self.order_sched["timemode"],
                 self.order_sched["interval"],
                 True
             )
-            random.shuffle(trader_ids)
+            random.shuffle(side_trader_ids)
 
             print("Creating %s Schedule" % side)
             print(issue_delays)
 
-            for t, t_id in enumerate(trader_ids):
+            for t, t_id in enumerate(side_trader_ids):
                 issue_time = now + timedelta(seconds=issue_delays[t])
                 session_time = (issue_time - self.start_time).total_seconds()
 
                 self.scheduler.add_job(
                     func=distribute_new_order,
                     name="Add Job Scheduler: " + side,
-                    args=[t, t_id, len(trader_ids), side, side_sched, session_time],
+                    args=[t, t_id, len(side_trader_ids), side, side_sched, session_time],
                     trigger='date',
                     run_date=issue_time,
                 )
@@ -209,7 +215,7 @@ class MarketSession:
 
             print("\nREPORT")
             self.print_results()
-            self.print_all()
+            self.print_summary()
 
             print("APPLICATION SAFE TO CLOSE")
 

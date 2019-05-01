@@ -2,15 +2,15 @@
     "traders": {
         "buyers": {
             "GVWY": 0,
-            "ZIC": 5,
-            "SHVR": 5,
-            "SNPR": 5
+            "ZIC": 10,
+            "SHVR": 10,
+            "SNPR": 10
         },
         "sellers": {
             "GVWY": 0,
-            "ZIC": 5,
-            "SHVR": 5,
-            "SNPR": 5
+            "ZIC": 10,
+            "SHVR": 10,
+            "SNPR": 10
         }
     },
     "order_schedule": {
