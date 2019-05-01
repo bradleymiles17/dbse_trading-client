@@ -186,8 +186,8 @@ class MarketSession:
             )
             random.shuffle(trader_ids)
 
-            print("Creating %s Schedule" % side)
-            print(issue_delays)
+            # print("Creating %s Schedule" % side)
+            # print(issue_delays)
 
             for t, t_id in enumerate(trader_ids):
                 issue_time = now + timedelta(seconds=issue_delays[t])
@@ -213,14 +213,14 @@ class MarketSession:
 
             print("APPLICATION SAFE TO CLOSE")
 
-        self.scheduler.add_job(
-            func=print_time,
-            name="Time Scheduler",
-            trigger='interval',
-            seconds=5,
-            start_date=self.start_time,
-            end_date=self.end_time
-        )
+        # self.scheduler.add_job(
+        #     func=print_time,
+        #     name="Time Scheduler",
+        #     trigger='interval',
+        #     seconds=5,
+        #     start_date=self.start_time,
+        #     end_date=self.end_time
+        # )
 
         # BUYERS
         self.scheduler.add_job(

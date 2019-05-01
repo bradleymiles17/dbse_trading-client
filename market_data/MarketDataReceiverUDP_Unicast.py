@@ -41,8 +41,8 @@ class MarketDataReceiver:
             if lob_update["time"] > self.last_update:
 
                 if self.verbose:
-                    print("MARKET UPDATE")
-                    self.__print_lob(lob_update)
+                    # print("MARKET UPDATE")
+                    # self.__print_lob(lob_update)
                     self.__print_stats(lob_update)
 
                 self.distribute(lob_update)
@@ -53,5 +53,6 @@ class MarketDataReceiver:
 
     def __print_stats(self, lob_update):
         now = time.time()
-        print("Latency = %.1fms (NOW=%f SENT=%f)" % ((now - lob_update["time"]) * 1000, now, lob_update["time"]))
+        print("%.1f" % ((now - lob_update["time"]) * 1000))
+        # print("Latency = %.1fms (NOW=%f SENT=%f)" % ((now - lob_update["time"]) * 1000, now, lob_update["time"]))
         # print("Time Since Last = %f\n" % (lob_update['time'] - self.lob['time']))
