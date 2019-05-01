@@ -1,7 +1,7 @@
 import random
 import time
 
-from fix import FixClient
+from fix_engine import FixClient
 from pkg.common.Order import Order, Side, OrderState
 
 

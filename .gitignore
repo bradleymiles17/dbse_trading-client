@@ -108,6 +108,6 @@ venv.bak/
 /.idea/
 /static/
 
-#fix application
-fix/logs/
-fix/sessions/
+#fix_engine application
+fix_engine/logs/
+fix_engine/sessions/

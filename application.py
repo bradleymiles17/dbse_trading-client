@@ -1,10 +1,9 @@
 import argparse
 import json
-import sys
 
 import quickfix as fix
 
-from fix.FixClient import FixClient
+from fix_engine.FixClient import FixClient
 from market_data.MarketDataReceiverUDP_Unicast import MarketDataReceiver
 from market_simulation.MarketSession import MarketSession
 from traders.TraderGiveaway import TraderGiveaway

@@ -53,5 +53,5 @@ class MarketDataReceiver:
 
     def __print_stats(self, lob_update):
         now = time.time()
-        print("Latency = %.0fms (NOW=%f SENT=%f)" % ((now - lob_update["time"]) * 1000, now, lob_update["time"]))
+        print("Latency = %.1fms (NOW=%f SENT=%f)" % ((now - lob_update["time"]) * 1000, now, lob_update["time"]))
         # print("Time Since Last = %f\n" % (lob_update['time'] - self.lob['time']))
