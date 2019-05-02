@@ -60,8 +60,8 @@ class Trader:
         for index in keys:
             self.fix_client.cancel_order(self.orders[index])
 
-        # self.orders = {}
-        # self.limit_orders = {}
+        self.orders = {}
+        self.limit_orders = {}
 
     def book_keep(self, order_id: int, status: OrderState, trade: Trade = None):
         order = self.orders[order_id]
@@ -69,10 +69,12 @@ class Trader:
 
         # TRADE OCCURRED
         if trade is not None:
+            limit = self.limit_orders[order_id]
+
             if order.side == Side.BID:
-                profit = (order.price - trade.price) * trade.qty
+                profit = (limit.price - trade.price) * trade.qty
             else:
-                profit = (trade.price - order.price) * trade.qty
+                profit = (trade.price - limit.price) * trade.qty
 
             self.balance += profit
             self.n_trades += 1
