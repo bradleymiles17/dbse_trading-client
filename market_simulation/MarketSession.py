@@ -190,10 +190,12 @@ class MarketSession:
                 self.order_sched["interval"],
                 True
             )
-            random.shuffle(side_trader_ids)
 
             print("Creating %s Schedule" % side)
             print(issue_delays)
+
+            random.shuffle(side_trader_ids)
+            random.shuffle(issue_delays)
 
             for t, t_id in enumerate(side_trader_ids):
                 issue_time = now + timedelta(seconds=issue_delays[t])
