@@ -10,8 +10,12 @@ from pkg.qf_map import *
 
 class MarketSession:
 
-    def __init__(self, trial_id, start_time_delay, duration, buyers, sellers, order_schedule):
-        self.start_time = datetime.now().replace(microsecond=0) + timedelta(seconds=start_time_delay)
+    def __init__(self, trial_id, sync, duration, buyers, sellers, order_schedule):
+        if sync is True:
+            self.start_time = datetime.now().replace(second=0, microsecond=0) + timedelta(seconds=60)
+        else:
+            self.start_time = datetime.now().replace(microsecond=0) + timedelta(seconds=5)
+
         self.end_time = self.start_time + timedelta(seconds=duration)
         self.orderID = 0
         self.trial_id = trial_id

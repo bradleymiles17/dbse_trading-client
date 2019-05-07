@@ -47,8 +47,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Bristol Stock Exchange')
     parser.add_argument('fix_config', type=str, help='FIX configuration file')
     parser.add_argument('market_config', type=str, help='Market Session configuration file')
-    parser.add_argument("-s", "--start_delay", type=float, default=5, help="start delay in seconds")
     parser.add_argument("-d", "--duration", type=float, default=300, help="duration of market session in seconds")
+    parser.add_argument("-s", "--sync", default=False, help="synchronize traders to next minute", action="store_true")
     parser.add_argument("-t", "--trader", default=False, help="increase trader output verbosity", action="store_true")
     parser.add_argument("-m", "--market", default=False, help="increase market output verbosity", action="store_true")
     parser.add_argument("-f", "--fix", default=False, help="increase fix output verbosity", action="store_true")
@@ -75,7 +75,7 @@ if __name__ == '__main__':
 
         market_session = MarketSession(
             0,
-            args.start_delay,
+            args.sync,
             args.duration,
             buyers,
             sellers,
